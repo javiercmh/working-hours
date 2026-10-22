@@ -1,0 +1,6 @@
+.dev_preferences.json
+app.log
+.claude/
+__pycache__/
+*.pyc
+*.zip
