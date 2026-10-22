@@ -26,4 +26,4 @@ See [AGENTS.md](AGENTS.md) for app behavior and [PACKAGING.md](PACKAGING.md) for
 
 ## License and origin
 
-MIT; see [LICENSE](LICENSE). Extracted from `examples/working_hours/` in App². The previous example icon is omitted because its source and redistribution licence are unknown. App² can use its default icon.
+MIT; see [LICENSE](LICENSE). Extracted from `examples/working_hours/` in App². The icon is cropped from an outside image; its original source and redistribution licence are unknown. The MIT licence does not establish rights to that image.

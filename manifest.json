@@ -20,6 +20,14 @@
     "data/entries.json",
     "data/settings.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "icon.png"
+  ],
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
