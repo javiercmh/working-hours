@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "templateVersion": 3,
   "description": "Daily working hours, breaks, and overhours balance tracker",
+  "author": "Javier Melo",
+  "license": "MIT",
   "main": "index.html",
   "files": [
     "index.html",
@@ -23,6 +25,34 @@
     "LICENSE",
     "icon.png"
   ],
+  "app2Update": {
+    "appId": "com.wynh.workinghours",
+    "minimumHostVersionCode": 1,
+    "github": {
+      "owner": "javiercmh",
+      "repository": "working-hours",
+      "branch": "main"
+    },
+    "managedFiles": [
+      "index.html",
+      "css/style.css",
+      "js/app.js",
+      "js/bridge.js",
+      "js/store.js",
+      "js/timefield.js",
+      "js/ui.js",
+      "manifest.json",
+      "AGENTS.md",
+      "PACKAGING.md",
+      "README.md",
+      "LICENSE",
+      "icon.png"
+    ],
+    "seedFiles": [
+      "data/entries.json",
+      "data/settings.json"
+    ]
+  },
   "icons": [
     {
       "src": "icon.png",
