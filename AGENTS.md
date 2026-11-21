@@ -9,7 +9,8 @@ This document describes the **Working Hours** application — its features, user
 ## 1. App Description & Purpose
 
 **Working Hours** (stylized as **Hours**) is an offline-first, mobile-optimized working hours, break, and overhours tracking application designed for fast daily timekeeping:
-- **Today Tracker**: Dedicated interface to log today's working hours with 24h ±15 min time steppers for start, end, and break — no date picker clutter and no preset chips.
+- **Today Tracker**: Dedicated interface to log today's working hours with 24h ±15 min time steppers for start, end, and break — plus a Work / Holiday / Sick selector (with Full day / Half day option for leave).
+- **Holiday & Sick Days**: Days can be marked as `holiday` or `sick` (full day or half day) in both the Today card and Shift Editor Sheet. Full-day leave hides the time steppers, counts as `+00:00` overtime, and skips the end-of-day reminder. Half-day leave keeps the time steppers visible and halves that day's working target (e.g. `08:00` → `04:00`).
 - **Autosave (today only)**: The Today card has no Save button — every committed change is written to disk immediately (debounced 250 ms, flushed on blur, tab switch, and app backgrounding), and the header chip reports the state as `✓` (saved), `•` (write pending), or `Not logged`. No timestamps, no status line. An entry is only created after a real user interaction, never on load.
 - **Manual Save for Any Other Day**: The Shift Editor Sheet never autosaves, not even when it shows today. Edits live in the sheet until **Save**, which writes and closes; the button is ghost-styled while nothing has changed and turns primary once it does. Closing with unsaved edits (`✕ Close`, backdrop, Esc, Android back) asks `Discard unsaved changes?` first. Merely opening the sheet writes nothing.
 - **Shift Editor Sheet**: A single bottom sheet (`<dialog id="sheet-editor">`) edits any day — opened from `Log another day` or by tapping a Dashboard row. It carries the date picker (`max = today`), the steppers, the net preview, and per-entry delete with Undo.
@@ -57,6 +58,7 @@ The output visualization strictly tracks and displays these exact core fields in
   {
     "id": "wh_1724659200000",
     "date": "2026-08-25",
+    "type": "work",
     "startTime": "08:30",
     "endTime": "17:00",
     "breakTime": "00:30",
@@ -67,9 +69,11 @@ The output visualization strictly tracks and displays these exact core fields in
 ```
 
 - **`date`**: ISO date string (`YYYY-MM-DD`).
-- **`startTime`**: Shift start time in `HH:MM` (24h format).
-- **`endTime`**: Shift end time in `HH:MM` (24h format).
-- **`breakTime`**: Total break duration in `HH:MM` (e.g. `00:30` for 30 minutes).
+- **`type`**: `"work"` (default), `"holiday"`, or `"sick"`.
+- **`halfDay`**: Optional boolean (`true` only on half-day `"holiday"` / `"sick"` entries; omitted otherwise). Halves the day's target while still recording worked hours.
+- **`startTime`**: Shift start time in `HH:MM` (24h format), or `""` for full-day holiday/sick entries.
+- **`endTime`**: Shift end time in `HH:MM` (24h format), or `""` for full-day holiday/sick entries.
+- **`breakTime`**: Total break duration in `HH:MM` (e.g. `00:30` for 30 minutes), or `""` for full-day holiday/sick entries.
 - **`transferred`**: Boolean flag indicating whether the entry has been manually transferred into an external spreadsheet.
 
 ### 3.2. Settings Schema (`data/settings.json`)

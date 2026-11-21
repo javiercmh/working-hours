@@ -19,6 +19,24 @@ export const DEFAULT_SETTINGS = {
   reminderLeadMinutes: 15
 };
 
+export const ENTRY_TYPES = ['work', 'holiday', 'sick'];
+
+export function normalizeEntryType(type) {
+  return type === 'holiday' || type === 'sick' ? type : 'work';
+}
+
+export function isLeaveType(type) {
+  return type === 'holiday' || type === 'sick';
+}
+
+export function isFullLeave(entry) {
+  return !!entry && isLeaveType(entry.type) && !entry.halfDay;
+}
+
+export function isHalfLeave(entry) {
+  return !!entry && isLeaveType(entry.type) && !!entry.halfDay;
+}
+
 export let entries = [];
 export let settings = { ...DEFAULT_SETTINGS };
 
@@ -145,19 +163,25 @@ export function isWorkingDay(dateStr) {
 }
 
 /**
- * Target minutes for one day: the daily target on working days, 0 otherwise —
- * so every logged minute of a non-working day counts as overtime.
+ * Target minutes for one day: the daily target on working days (halved for
+ * half-day holiday/sick), 0 for full-day holiday/sick or non-working days.
  */
-export function dayTargetMinutes(dateStr, dailyTargetTime = null) {
+export function dayTargetMinutes(dateStr, dailyTargetTime = null, { type = 'work', halfDay = false } = {}) {
   if (!isWorkingDay(dateStr)) return 0;
-  return timeToMinutes(dailyTargetTime || settings.dailyTargetTime || '08:00');
+  const entryType = normalizeEntryType(type);
+  if (isLeaveType(entryType) && !halfDay) return 0;
+  const base = timeToMinutes(dailyTargetTime || settings.dailyTargetTime || '08:00');
+  return isLeaveType(entryType) && halfDay ? Math.round(base / 2) : base;
 }
 
 /**
  * Calculates daily overtime minutes relative to that day's target.
+ * Full-day holiday and sick days are neutral (0 overtime impact).
+ * Half-day holiday and sick days compare worked hours against half the daily target.
  */
 export function calcDayOvertimeMinutes(entry, dailyTargetTime = null) {
-  const target = dayTargetMinutes(entry.date, dailyTargetTime);
+  if (!entry || isFullLeave(entry)) return 0;
+  const target = dayTargetMinutes(entry.date, dailyTargetTime, entry);
   const net = calcNetMinutes(entry.startTime, entry.endTime, entry.breakTime);
   return net - target;
 }
@@ -183,10 +207,11 @@ export function calcTotalOvertime() {
 
 /**
  * Epoch milliseconds at which to remind, `leadMinutes` before an entry's end time.
- * Returns null when the entry has no usable end time. Overnight shifts end the next day.
+ * Returns null when the entry is a full-day holiday/sick day or has no usable end time.
+ * Overnight shifts end the next day.
  */
 export function reminderTimestamp(entry, leadMinutes = 15) {
-  if (!entry || !entry.date || !entry.endTime) return null;
+  if (!entry || isFullLeave(entry) || !entry.date || !entry.endTime) return null;
   const parts = String(entry.date).split('-');
   if (parts.length !== 3) return null;
 
@@ -215,6 +240,12 @@ export function loadEntries() {
     entries = Array.isArray(parsed) ? parsed : [];
     // Normalize any legacy format entries
     entries.forEach((e) => {
+      e.type = normalizeEntryType(e.type);
+      if (isLeaveType(e.type) && e.halfDay) {
+        e.halfDay = true;
+      } else {
+        delete e.halfDay;
+      }
       if (e.breakMinutes !== undefined && !e.breakTime) {
         e.breakTime = minutesToTime(e.breakMinutes);
       }
@@ -252,8 +283,11 @@ export function findEntryById(id) {
  * Adds a new entry or updates an existing entry by id or date.
  * Preserves or sets the transferred status.
  */
-export function addOrUpdateEntry({ id = null, date, startTime, endTime, breakTime, transferred = undefined }) {
+export function addOrUpdateEntry({ id = null, date, type = 'work', halfDay = false, startTime, endTime, breakTime, transferred = undefined }) {
   const d = date || localIso();
+  const entryType = normalizeEntryType(type);
+  const isHalf = isLeaveType(entryType) && !!halfDay;
+  const fullLeave = isLeaveType(entryType) && !isHalf;
   let existingIdx = id !== null ? entries.findIndex((e) => e.id === id) : -1;
   if (existingIdx === -1 && d) {
     existingIdx = entries.findIndex((e) => e.date === d);
@@ -265,9 +299,11 @@ export function addOrUpdateEntry({ id = null, date, startTime, endTime, breakTim
   const entryData = {
     id: existing?.id || id || `wh_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
     date: d,
-    startTime: startTime || settings.defaultStartTime || '09:00',
-    endTime: endTime || settings.defaultEndTime || '18:00',
-    breakTime: breakTime || settings.defaultBreakTime || '01:00',
+    type: entryType,
+    ...(isHalf ? { halfDay: true } : {}),
+    startTime: fullLeave ? '' : (startTime || settings.defaultStartTime || '09:00'),
+    endTime: fullLeave ? '' : (endTime || settings.defaultEndTime || '18:00'),
+    breakTime: fullLeave ? '' : (breakTime || settings.defaultBreakTime || '01:00'),
     transferred: isTransferred,
     createdAt: existing?.createdAt || Date.now()
   };

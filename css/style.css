@@ -25,6 +25,8 @@
   --danger-surface: rgba(220, 38, 38, 0.07);
   --success: #059669;
   --warning: #b45309;
+  --holiday: #0284c7;
+  --sick: #9333ea;
 
   --toast-bg: #1e293b;
   --toast-text: #f8fafc;
@@ -54,6 +56,8 @@
     --danger-surface: rgba(248, 113, 113, 0.12);
     --success: #34d399;
     --warning: #fbbf24;
+    --holiday: #38bdf8;
+    --sick: #c084fc;
 
     --tabbar-bg: rgba(9, 13, 22, 0.92);
     --shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.5);
@@ -79,6 +83,8 @@
   --danger-surface: rgba(248, 113, 113, 0.12);
   --success: #34d399;
   --warning: #fbbf24;
+  --holiday: #38bdf8;
+  --sick: #c084fc;
 
   --tabbar-bg: rgba(9, 13, 22, 0.92);
   --shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.5);
@@ -327,6 +333,12 @@ code {
   gap: 4px;
 }
 
+.work-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* Break section */
 .break-section {
   display: flex;
@@ -366,6 +378,23 @@ code {
   padding: 2px 7px;
   border-radius: 999px;
 }
+.leave-box {
+  padding: 12px 14px;
+}
+.leave-box.type-holiday {
+  border-color: color-mix(in srgb, var(--holiday) 35%, var(--border));
+  background: color-mix(in srgb, var(--holiday) 8%, var(--inset));
+}
+.leave-box.type-sick {
+  border-color: color-mix(in srgb, var(--sick) 35%, var(--border));
+  background: color-mix(in srgb, var(--sick) 8%, var(--inset));
+}
+.leave-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.leave-box.type-holiday .leave-title { color: var(--holiday); }
+.leave-box.type-sick .leave-title { color: var(--sick); }
 
 /* --- Autosave status line (replaces the Save button) --- */
 /* --- Buttons --- */
@@ -514,8 +543,9 @@ code {
 }
 .entry-header-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .entry-date {
   font-weight: 700;
@@ -531,6 +561,23 @@ code {
   background: color-mix(in srgb, var(--warning) 16%, transparent);
   padding: 2px 6px;
   border-radius: 999px;
+}
+.type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.type-pill.type-holiday {
+  color: var(--holiday);
+  background: color-mix(in srgb, var(--holiday) 15%, transparent);
+}
+.type-pill.type-sick {
+  color: var(--sick);
+  background: color-mix(in srgb, var(--sick) 15%, transparent);
 }
 .entry-times-row {
   display: flex;
@@ -649,7 +696,7 @@ code {
 .switch:checked { background: var(--accent); border-color: var(--accent); }
 .switch:checked::after { transform: translateX(20px); }
 
-/* --- Segmented control (theme) --- */
+/* --- Segmented control (theme & day type) --- */
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -657,6 +704,9 @@ code {
   background: var(--tint);
   border-radius: 12px;
   padding: 4px;
+}
+.segmented-2 {
+  grid-template-columns: repeat(2, 1fr);
 }
 .segment {
   min-height: 40px;

@@ -22,52 +22,74 @@
         <span id="today-status-chip" class="badge">Not logged</span>
       </div>
 
-      <!-- Start & End Times (24h steppers, 15 min increments) -->
-      <div class="time-grid">
-        <div class="time-col">
-          <label for="input-today-start" class="field-label">Start</label>
-          <div class="stepper" id="stepper-today-start" data-mode="clock" data-step="15">
-            <button type="button" class="stepper-btn" data-delta="-1" aria-label="Start 15 minutes earlier">−</button>
-            <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-today-start" value="08:30">
-            <button type="button" class="stepper-btn" data-delta="1" aria-label="Start 15 minutes later">+</button>
+      <div id="today-type-segmented" class="segmented" role="radiogroup" aria-label="Day type">
+        <button type="button" class="segment active" data-type="work" role="radio" aria-checked="true">Work</button>
+        <button type="button" class="segment" data-type="holiday" role="radio" aria-checked="false">Holiday</button>
+        <button type="button" class="segment" data-type="sick" role="radio" aria-checked="false">Sick</button>
+      </div>
+
+      <div id="today-portion-segmented" class="segmented segmented-2" role="radiogroup" aria-label="Leave duration" hidden>
+        <button type="button" class="segment active" data-portion="full" role="radio" aria-checked="true">Full day</button>
+        <button type="button" class="segment" data-portion="half" role="radio" aria-checked="false">Half day</button>
+      </div>
+
+      <div id="today-work-fields" class="work-fields">
+        <!-- Start & End Times (24h steppers, 15 min increments) -->
+        <div class="time-grid">
+          <div class="time-col">
+            <label for="input-today-start" class="field-label">Start</label>
+            <div class="stepper" id="stepper-today-start" data-mode="clock" data-step="15">
+              <button type="button" class="stepper-btn" data-delta="-1" aria-label="Start 15 minutes earlier">−</button>
+              <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-today-start" value="08:30">
+              <button type="button" class="stepper-btn" data-delta="1" aria-label="Start 15 minutes later">+</button>
+            </div>
+            <button type="button" id="btn-today-now-start" class="link-btn link-btn-right">Now</button>
           </div>
-          <button type="button" id="btn-today-now-start" class="link-btn link-btn-right">Now</button>
+          <div class="time-col">
+            <label for="input-today-end" class="field-label">End</label>
+            <div class="stepper" id="stepper-today-end" data-mode="clock" data-step="15">
+              <button type="button" class="stepper-btn" data-delta="-1" aria-label="End 15 minutes earlier">−</button>
+              <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-today-end" value="17:00">
+              <button type="button" class="stepper-btn" data-delta="1" aria-label="End 15 minutes later">+</button>
+            </div>
+            <button type="button" id="btn-today-now-end" class="link-btn link-btn-right">Now</button>
+          </div>
         </div>
-        <div class="time-col">
-          <label for="input-today-end" class="field-label">End</label>
-          <div class="stepper" id="stepper-today-end" data-mode="clock" data-step="15">
-            <button type="button" class="stepper-btn" data-delta="-1" aria-label="End 15 minutes earlier">−</button>
-            <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-today-end" value="17:00">
-            <button type="button" class="stepper-btn" data-delta="1" aria-label="End 15 minutes later">+</button>
+
+        <!-- Total Break Time with 0, 30, 60, 90 presets -->
+        <div class="break-section">
+          <label for="input-today-break" class="field-label">Break</label>
+          <div class="stepper" id="stepper-today-break" data-mode="duration" data-step="15">
+            <button type="button" class="stepper-btn" data-delta="-1" aria-label="Break 15 minutes shorter">−</button>
+            <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-today-break" value="00:30">
+            <button type="button" class="stepper-btn" data-delta="1" aria-label="Break 15 minutes longer">+</button>
           </div>
-          <button type="button" id="btn-today-now-end" class="link-btn link-btn-right">Now</button>
+        </div>
+
+        <!-- Net Preview Box -->
+        <div class="net-preview-box">
+          <div class="row-between">
+            <span class="muted">Net work time</span>
+            <span class="net-line">
+              <span id="today-overnight" class="overnight-hint" hidden>+1 day</span>
+              <span id="today-net-time" class="net-value">08:00</span>
+            </span>
+          </div>
+          <div class="row-between">
+            <span class="muted">Overtime vs target</span>
+            <span id="today-overtime" class="overtime-value positive">+00:00</span>
+          </div>
+          <p id="today-nonworking-hint" class="muted-small nonworking-hint" hidden>Non-working day — all hours count as overtime.</p>
+          <p id="today-halfday-hint" class="muted-small nonworking-hint" hidden></p>
         </div>
       </div>
 
-      <!-- Total Break Time with 0, 30, 60, 90 presets -->
-      <div class="break-section">
-        <label for="input-today-break" class="field-label">Break</label>
-        <div class="stepper" id="stepper-today-break" data-mode="duration" data-step="15">
-          <button type="button" class="stepper-btn" data-delta="-1" aria-label="Break 15 minutes shorter">−</button>
-          <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-today-break" value="00:30">
-          <button type="button" class="stepper-btn" data-delta="1" aria-label="Break 15 minutes longer">+</button>
-        </div>
-      </div>
-
-      <!-- Net Preview Box -->
-      <div class="net-preview-box">
+      <div id="today-leave-box" class="net-preview-box leave-box" hidden>
         <div class="row-between">
-          <span class="muted">Net work time</span>
-          <span class="net-line">
-            <span id="today-overnight" class="overnight-hint" hidden>+1 day</span>
-            <span id="today-net-time" class="net-value">08:00</span>
-          </span>
+          <span id="today-leave-label" class="leave-title">Holiday</span>
+          <span class="badge">+00:00</span>
         </div>
-        <div class="row-between">
-          <span class="muted">Overtime vs target</span>
-          <span id="today-overtime" class="overtime-value positive">+00:00</span>
-        </div>
-        <p id="today-nonworking-hint" class="muted-small nonworking-hint" hidden>Non-working day — all hours count as overtime.</p>
+        <p class="muted-small">Full day off — counts as 00:00 overtime.</p>
       </div>
 
     </div>
@@ -272,49 +294,71 @@
         <input type="date" id="input-sheet-date" class="field date-field">
       </div>
 
-      <div class="time-grid">
-        <div class="time-col">
-          <label for="input-sheet-start" class="field-label">Start</label>
-          <div class="stepper" id="stepper-sheet-start" data-mode="clock" data-step="15">
-            <button type="button" class="stepper-btn" data-delta="-1" aria-label="Start 15 minutes earlier">−</button>
-            <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-sheet-start" value="08:30">
-            <button type="button" class="stepper-btn" data-delta="1" aria-label="Start 15 minutes later">+</button>
+      <div id="sheet-type-segmented" class="segmented" role="radiogroup" aria-label="Day type">
+        <button type="button" class="segment active" data-type="work" role="radio" aria-checked="true">Work</button>
+        <button type="button" class="segment" data-type="holiday" role="radio" aria-checked="false">Holiday</button>
+        <button type="button" class="segment" data-type="sick" role="radio" aria-checked="false">Sick</button>
+      </div>
+
+      <div id="sheet-portion-segmented" class="segmented segmented-2" role="radiogroup" aria-label="Leave duration" hidden>
+        <button type="button" class="segment active" data-portion="full" role="radio" aria-checked="true">Full day</button>
+        <button type="button" class="segment" data-portion="half" role="radio" aria-checked="false">Half day</button>
+      </div>
+
+      <div id="sheet-work-fields" class="work-fields">
+        <div class="time-grid">
+          <div class="time-col">
+            <label for="input-sheet-start" class="field-label">Start</label>
+            <div class="stepper" id="stepper-sheet-start" data-mode="clock" data-step="15">
+              <button type="button" class="stepper-btn" data-delta="-1" aria-label="Start 15 minutes earlier">−</button>
+              <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-sheet-start" value="08:30">
+              <button type="button" class="stepper-btn" data-delta="1" aria-label="Start 15 minutes later">+</button>
+            </div>
+            <button type="button" id="btn-sheet-now-start" class="link-btn link-btn-right">Now</button>
           </div>
-          <button type="button" id="btn-sheet-now-start" class="link-btn link-btn-right">Now</button>
+          <div class="time-col">
+            <label for="input-sheet-end" class="field-label">End</label>
+            <div class="stepper" id="stepper-sheet-end" data-mode="clock" data-step="15">
+              <button type="button" class="stepper-btn" data-delta="-1" aria-label="End 15 minutes earlier">−</button>
+              <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-sheet-end" value="17:00">
+              <button type="button" class="stepper-btn" data-delta="1" aria-label="End 15 minutes later">+</button>
+            </div>
+            <button type="button" id="btn-sheet-now-end" class="link-btn link-btn-right">Now</button>
+          </div>
         </div>
-        <div class="time-col">
-          <label for="input-sheet-end" class="field-label">End</label>
-          <div class="stepper" id="stepper-sheet-end" data-mode="clock" data-step="15">
-            <button type="button" class="stepper-btn" data-delta="-1" aria-label="End 15 minutes earlier">−</button>
-            <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-sheet-end" value="17:00">
-            <button type="button" class="stepper-btn" data-delta="1" aria-label="End 15 minutes later">+</button>
+
+        <div class="break-section">
+          <label for="input-sheet-break" class="field-label">Break</label>
+          <div class="stepper" id="stepper-sheet-break" data-mode="duration" data-step="15">
+            <button type="button" class="stepper-btn" data-delta="-1" aria-label="Break 15 minutes shorter">−</button>
+            <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-sheet-break" value="00:30">
+            <button type="button" class="stepper-btn" data-delta="1" aria-label="Break 15 minutes longer">+</button>
           </div>
-          <button type="button" id="btn-sheet-now-end" class="link-btn link-btn-right">Now</button>
+        </div>
+
+        <div class="net-preview-box">
+          <div class="row-between">
+            <span class="muted">Net work time</span>
+            <span class="net-line">
+              <span id="sheet-overnight" class="overnight-hint" hidden>+1 day</span>
+              <span id="sheet-net-time" class="net-value">08:00</span>
+            </span>
+          </div>
+          <div class="row-between">
+            <span class="muted">Overtime vs target</span>
+            <span id="sheet-overtime" class="overtime-value positive">+00:00</span>
+          </div>
+          <p id="sheet-nonworking-hint" class="muted-small nonworking-hint" hidden>Non-working day — all hours count as overtime.</p>
+          <p id="sheet-halfday-hint" class="muted-small nonworking-hint" hidden></p>
         </div>
       </div>
 
-      <div class="break-section">
-        <label for="input-sheet-break" class="field-label">Break</label>
-        <div class="stepper" id="stepper-sheet-break" data-mode="duration" data-step="15">
-          <button type="button" class="stepper-btn" data-delta="-1" aria-label="Break 15 minutes shorter">−</button>
-          <input class="stepper-value" type="text" inputmode="numeric" maxlength="5" id="input-sheet-break" value="00:30">
-          <button type="button" class="stepper-btn" data-delta="1" aria-label="Break 15 minutes longer">+</button>
-        </div>
-      </div>
-
-      <div class="net-preview-box">
+      <div id="sheet-leave-box" class="net-preview-box leave-box" hidden>
         <div class="row-between">
-          <span class="muted">Net work time</span>
-          <span class="net-line">
-            <span id="sheet-overnight" class="overnight-hint" hidden>+1 day</span>
-            <span id="sheet-net-time" class="net-value">08:00</span>
-          </span>
+          <span id="sheet-leave-label" class="leave-title">Holiday</span>
+          <span class="badge">+00:00</span>
         </div>
-        <div class="row-between">
-          <span class="muted">Overtime vs target</span>
-          <span id="sheet-overtime" class="overtime-value positive">+00:00</span>
-        </div>
-        <p id="sheet-nonworking-hint" class="muted-small nonworking-hint" hidden>Non-working day — all hours count as overtime.</p>
+        <p class="muted-small">Full day off — counts as 00:00 overtime.</p>
       </div>
 
       <div class="row">

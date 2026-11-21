@@ -136,7 +136,59 @@ function setTodayStatus(state) {
 
 // --- Today's Shift Editor ---
 
+const DAY_TYPE_LABELS = {
+  work: 'Work',
+  holiday: 'Holiday',
+  sick: 'Sick day'
+};
+
+const HALF_DAY_LABELS = {
+  holiday: '½ Holiday',
+  sick: '½ Sick'
+};
+
+function renderTypeControl({ typeId, portionId, workFieldsId, leaveBoxId, leaveLabelId, type, halfDay }) {
+  const typeContainer = $(typeId);
+  if (typeContainer) {
+    typeContainer.querySelectorAll('.segment').forEach((seg) => {
+      const active = seg.dataset.type === type;
+      seg.classList.toggle('active', active);
+      seg.setAttribute('aria-checked', String(active));
+    });
+  }
+
+  const leave = store.isLeaveType(type);
+  const fullLeave = leave && !halfDay;
+
+  const portionContainer = $(portionId);
+  if (portionContainer) {
+    portionContainer.hidden = !leave;
+    portionContainer.querySelectorAll('.segment').forEach((seg) => {
+      const active = seg.dataset.portion === (halfDay ? 'half' : 'full');
+      seg.classList.toggle('active', active);
+      seg.setAttribute('aria-checked', String(active));
+    });
+  }
+
+  const workFields = $(workFieldsId);
+  if (workFields) workFields.hidden = fullLeave;
+
+  const leaveBox = $(leaveBoxId);
+  if (leaveBox) {
+    leaveBox.hidden = !fullLeave;
+    leaveBox.classList.toggle('type-holiday', type === 'holiday');
+    leaveBox.classList.toggle('type-sick', type === 'sick');
+  }
+
+  const leaveLabel = $(leaveLabelId);
+  if (leaveLabel && fullLeave) {
+    leaveLabel.textContent = DAY_TYPE_LABELS[type] || 'Day off';
+  }
+}
+
 let todayDirty = false;
+let todayType = 'work';
+let todayHalfDay = false;
 
 export function initTodayEditor() {
   const todayDate = getTodayIso();
@@ -144,10 +196,22 @@ export function initTodayEditor() {
   if (dateChip) dateChip.textContent = formatGermanDate(todayDate, true);
 
   const existing = store.findEntryByDate(todayDate);
+  todayType = store.normalizeEntryType(existing?.type);
+  todayHalfDay = store.isHalfLeave(existing);
 
   fields.todayStart?.set(existing?.startTime || store.settings.defaultStartTime || '08:30');
   fields.todayEnd?.set(existing?.endTime || store.settings.defaultEndTime || '17:00');
   fields.todayBreak?.set(existing?.breakTime || store.settings.defaultBreakTime || '00:30');
+
+  renderTypeControl({
+    typeId: 'today-type-segmented',
+    portionId: 'today-portion-segmented',
+    workFieldsId: 'today-work-fields',
+    leaveBoxId: 'today-leave-box',
+    leaveLabelId: 'today-leave-label',
+    type: todayType,
+    halfDay: todayHalfDay
+  });
 
   todayDirty = !!existing;
   setTodayStatus(existing ? 'saved' : 'none');
@@ -158,19 +222,23 @@ export function initTodayEditor() {
 export function updateTodayPreview() {
   renderPreview({
     date: getTodayIso(),
+    type: todayType,
+    halfDay: todayHalfDay,
     start: fields.todayStart?.get() || '00:00',
     end: fields.todayEnd?.get() || '00:00',
     brk: fields.todayBreak?.get() || '00:00',
     netEl: $('today-net-time'),
     overtimeEl: $('today-overtime'),
     overnightEl: $('today-overnight'),
-    hintEl: $('today-nonworking-hint')
+    hintEl: $('today-nonworking-hint'),
+    halfDayHintEl: $('today-halfday-hint')
   });
 }
 
-function renderPreview({ date, start, end, brk, netEl, overtimeEl, overnightEl, hintEl }) {
+function renderPreview({ date, type = 'work', halfDay = false, start, end, brk, netEl, overtimeEl, overnightEl, hintEl, halfDayHintEl }) {
   const netMins = store.calcNetMinutes(start, end, brk);
-  const targetMins = store.dayTargetMinutes(date, store.settings.dailyTargetTime);
+  const workingDay = store.isWorkingDay(date);
+  const targetMins = store.dayTargetMinutes(date, store.settings.dailyTargetTime, { type, halfDay });
   const diffMins = netMins - targetMins;
 
   if (netEl) netEl.textContent = store.minutesToTime(netMins);
@@ -179,13 +247,23 @@ function renderPreview({ date, start, end, brk, netEl, overtimeEl, overnightEl, 
     overtimeEl.className = `overtime-value ${diffMins >= 0 ? 'positive' : 'negative'}`;
   }
   if (overnightEl) overnightEl.hidden = !store.isOvernight(start, end);
-  if (hintEl) hintEl.hidden = store.isWorkingDay(date);
+  if (hintEl) hintEl.hidden = workingDay;
+  if (halfDayHintEl) {
+    const showHalf = workingDay && store.isLeaveType(type) && halfDay;
+    halfDayHintEl.hidden = !showHalf;
+    if (showHalf) {
+      const label = type === 'holiday' ? 'Half-day holiday' : 'Half-day sick';
+      halfDayHintEl.textContent = `${label} — daily target halved to ${store.minutesToTime(targetMins)}.`;
+    }
+  }
 }
 
 function saveTodayNow() {
   const date = getTodayIso();
   store.addOrUpdateEntry({
     date,
+    type: todayType,
+    halfDay: todayHalfDay,
     startTime: fields.todayStart?.get(),
     endTime: fields.todayEnd?.get(),
     breakTime: fields.todayBreak?.get()
@@ -208,6 +286,8 @@ function onTodayEdit() {
 
 let sheetDate = null;
 let sheetDirty = false;
+let sheetType = 'work';
+let sheetHalfDay = false;
 
 function sheetEntry() {
   return sheetDate ? store.findEntryByDate(sheetDate) : null;
@@ -234,6 +314,8 @@ export function openSheet(dateStr) {
 function loadSheetDate(dateStr) {
   sheetDate = dateStr;
   const existing = sheetEntry();
+  sheetType = store.normalizeEntryType(existing?.type);
+  sheetHalfDay = store.isHalfLeave(existing);
 
   const display = $('sheet-date-display');
   if (display) display.textContent = formatGermanDate(sheetDate, true);
@@ -245,6 +327,16 @@ function loadSheetDate(dateStr) {
   fields.sheetEnd?.set(existing?.endTime || store.settings.defaultEndTime || '17:00');
   fields.sheetBreak?.set(existing?.breakTime || store.settings.defaultBreakTime || '00:30');
 
+  renderTypeControl({
+    typeId: 'sheet-type-segmented',
+    portionId: 'sheet-portion-segmented',
+    workFieldsId: 'sheet-work-fields',
+    leaveBoxId: 'sheet-leave-box',
+    leaveLabelId: 'sheet-leave-label',
+    type: sheetType,
+    halfDay: sheetHalfDay
+  });
+
   const deleteBtn = $('btn-sheet-delete');
   if (deleteBtn) deleteBtn.hidden = !existing;
 
@@ -255,13 +347,16 @@ function loadSheetDate(dateStr) {
 export function updateSheetPreview() {
   renderPreview({
     date: sheetDate,
+    type: sheetType,
+    halfDay: sheetHalfDay,
     start: fields.sheetStart?.get() || '00:00',
     end: fields.sheetEnd?.get() || '00:00',
     brk: fields.sheetBreak?.get() || '00:00',
     netEl: $('sheet-net-time'),
     overtimeEl: $('sheet-overtime'),
     overnightEl: $('sheet-overnight'),
-    hintEl: $('sheet-nonworking-hint')
+    hintEl: $('sheet-nonworking-hint'),
+    halfDayHintEl: $('sheet-halfday-hint')
   });
 }
 
@@ -278,6 +373,8 @@ function saveSheetNow() {
   if (!sheetDate) return;
   store.addOrUpdateEntry({
     date: sheetDate,
+    type: sheetType,
+    halfDay: sheetHalfDay,
     startTime: fields.sheetStart?.get(),
     endTime: fields.sheetEnd?.get(),
     breakTime: fields.sheetBreak?.get()
@@ -325,6 +422,38 @@ function refreshTodayFromStore() {
 // --- Setup Event Listeners for Tracker View ---
 
 export function setupTrackerEvents() {
+  // Today's day type & full/half selector
+  const syncTodayTypeUI = () => renderTypeControl({
+    typeId: 'today-type-segmented',
+    portionId: 'today-portion-segmented',
+    workFieldsId: 'today-work-fields',
+    leaveBoxId: 'today-leave-box',
+    leaveLabelId: 'today-leave-label',
+    type: todayType,
+    halfDay: todayHalfDay
+  });
+
+  document.querySelectorAll('#today-type-segmented .segment').forEach((seg) => {
+    seg.addEventListener('click', () => {
+      const next = store.normalizeEntryType(seg.dataset.type);
+      if (next === todayType) return;
+      todayType = next;
+      if (!store.isLeaveType(todayType)) todayHalfDay = false;
+      syncTodayTypeUI();
+      onTodayEdit();
+    });
+  });
+
+  document.querySelectorAll('#today-portion-segmented .segment').forEach((seg) => {
+    seg.addEventListener('click', () => {
+      const nextHalf = seg.dataset.portion === 'half';
+      if (nextHalf === todayHalfDay) return;
+      todayHalfDay = nextHalf;
+      syncTodayTypeUI();
+      onTodayEdit();
+    });
+  });
+
   // Today's steppers
   fields.todayStart = attachTimeField($('stepper-today-start'), { mode: 'clock', onCommit: onTodayEdit });
   fields.todayEnd = attachTimeField($('stepper-today-end'), { mode: 'clock', onCommit: onTodayEdit });
@@ -340,6 +469,37 @@ export function setupTrackerEvents() {
   });
 
   // --- Sheet editor ---
+  const syncSheetTypeUI = () => renderTypeControl({
+    typeId: 'sheet-type-segmented',
+    portionId: 'sheet-portion-segmented',
+    workFieldsId: 'sheet-work-fields',
+    leaveBoxId: 'sheet-leave-box',
+    leaveLabelId: 'sheet-leave-label',
+    type: sheetType,
+    halfDay: sheetHalfDay
+  });
+
+  document.querySelectorAll('#sheet-type-segmented .segment').forEach((seg) => {
+    seg.addEventListener('click', () => {
+      const next = store.normalizeEntryType(seg.dataset.type);
+      if (next === sheetType) return;
+      sheetType = next;
+      if (!store.isLeaveType(sheetType)) sheetHalfDay = false;
+      syncSheetTypeUI();
+      onSheetEdit();
+    });
+  });
+
+  document.querySelectorAll('#sheet-portion-segmented .segment').forEach((seg) => {
+    seg.addEventListener('click', () => {
+      const nextHalf = seg.dataset.portion === 'half';
+      if (nextHalf === sheetHalfDay) return;
+      sheetHalfDay = nextHalf;
+      syncSheetTypeUI();
+      onSheetEdit();
+    });
+  });
+
   fields.sheetStart = attachTimeField($('stepper-sheet-start'), { mode: 'clock', onCommit: onSheetEdit });
   fields.sheetEnd = attachTimeField($('stepper-sheet-end'), { mode: 'clock', onCommit: onSheetEdit });
   fields.sheetBreak = attachTimeField($('stepper-sheet-break'), { mode: 'duration', onCommit: onSheetEdit });
@@ -500,6 +660,11 @@ function updateReminderHint(scheduledAt, scheduleFailed = false) {
     hint.textContent = 'Today isn\'t logged yet — the reminder is set as soon as you log it.';
     return;
   }
+  if (store.isFullLeave(entry)) {
+    const label = entry.type === 'holiday' ? 'a holiday' : 'a sick day';
+    hint.textContent = `Today is marked as ${label} — no reminder scheduled.`;
+    return;
+  }
   if (scheduleFailed) {
     hint.textContent = 'Reminder could not be scheduled. Check notification and precise alarm access.';
     return;
@@ -602,7 +767,10 @@ function createShiftRow(entry) {
   row.dataset.date = entry.date;
   row.dataset.id = entry.id;
 
-  const netTime = store.calcNetDuration(entry.startTime, entry.endTime, entry.breakTime);
+  const entryType = store.normalizeEntryType(entry.type);
+  const fullLeave = store.isFullLeave(entry);
+  const halfLeave = store.isHalfLeave(entry);
+  const netTime = fullLeave ? '—' : store.calcNetDuration(entry.startTime, entry.endTime, entry.breakTime);
   const overtimeMins = store.calcDayOvertimeMinutes(entry, store.settings.dailyTargetTime);
   const overtimeStr = store.minutesToTime(overtimeMins, true);
   const isPos = overtimeMins >= 0;
@@ -642,6 +810,13 @@ function createShiftRow(entry) {
   dateEl.textContent = formatGermanDate(entry.date, true);
   headerRow.appendChild(dateEl);
 
+  if (halfLeave) {
+    const halfPill = document.createElement('span');
+    halfPill.className = `type-pill type-${entryType}`;
+    halfPill.textContent = HALF_DAY_LABELS[entryType] || '½ Day off';
+    headerRow.appendChild(halfPill);
+  }
+
   const pill = document.createElement('span');
   pill.className = 'pending-pill';
   pill.textContent = 'Pending';
@@ -650,11 +825,18 @@ function createShiftRow(entry) {
 
   const timesRow = document.createElement('div');
   timesRow.className = 'entry-times-row';
-  timesRow.innerHTML = `
-    <span><strong>${entry.startTime}</strong>–<strong>${entry.endTime}</strong></span>
-    <span>·</span>
-    <span>Break <strong>${entry.breakTime}</strong></span>
-  `;
+  if (fullLeave) {
+    const typePill = document.createElement('span');
+    typePill.className = `type-pill type-${entryType}`;
+    typePill.textContent = DAY_TYPE_LABELS[entryType] || 'Day off';
+    timesRow.appendChild(typePill);
+  } else {
+    timesRow.innerHTML = `
+      <span><strong>${entry.startTime}</strong>–<strong>${entry.endTime}</strong></span>
+      <span>·</span>
+      <span>Break <strong>${entry.breakTime}</strong></span>
+    `;
+  }
 
   main.appendChild(headerRow);
   main.appendChild(timesRow);
@@ -664,9 +846,10 @@ function createShiftRow(entry) {
   side.className = 'entry-side';
   const netBadge = document.createElement('div');
   netBadge.className = 'entry-net-badge';
+  const badgeClass = fullLeave ? 'badge' : `badge ${isPos ? 'positive' : 'negative'}`;
   netBadge.innerHTML = `
     <span class="entry-net-time">${netTime}</span>
-    <span class="badge ${isPos ? 'positive' : 'negative'}">${overtimeStr}</span>
+    <span class="${badgeClass}">${overtimeStr}</span>
   `;
   side.appendChild(netBadge);
   open.appendChild(side);
